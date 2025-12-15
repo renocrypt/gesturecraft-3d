@@ -1,0 +1,7 @@
+{
+  "name": "GestureCraft 3D",
+  "description": "Control a dynamic 3D artifact using hand gestures powered by MediaPipe on-device AI.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
