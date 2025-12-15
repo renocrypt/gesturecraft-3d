@@ -182,18 +182,7 @@ const Overlay: React.FC<OverlayProps> = ({ detectionResult, isDarkMode, toggleTh
       {/* Footer / Dynamic Legend */}
       <div className="pointer-events-auto flex flex-wrap items-end gap-2 sm:gap-4 max-w-3xl min-h-[40px]">
         
-        <div className="flex flex-wrap items-end gap-2 sm:gap-4">
-          {/* Persistent Pinch Hint (Reacts to state) */}
-          <div className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-all duration-300 ${
-                  isPinching
-                  ? "bg-orange-500 text-white scale-105 shadow-lg shadow-orange-500/20"
-                  : isDarkMode ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-black/5 text-gray-600 hover:bg-black/10"
-              }`}>
-               {isPinching ? <Move size={12} className="animate-spin" /> : <Move size={12} />}
-               <span>Pinch & Rotate</span>
-               {!isPinching && <span className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase opacity-60">Tip</span>}
-          </div>
-
+        <div className="flex flex-col items-start gap-2">
           {/* Shape selector (disclosure pill) */}
           <div ref={shapeMenuRef} className="relative">
             <button
@@ -202,12 +191,13 @@ const Overlay: React.FC<OverlayProps> = ({ detectionResult, isDarkMode, toggleTh
               aria-expanded={isShapeMenuOpen}
               onClick={() => setIsShapeMenuOpen((open) => !open)}
               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-all duration-300 ${
-                isDarkMode ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-black/5 text-gray-600 hover:bg-black/10"
+                isDarkMode
+                  ? "bg-white/5 text-white/70 hover:bg-white/10"
+                  : "bg-black/5 text-gray-600 hover:bg-black/10"
               }`}
             >
-              <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Shape</span>
-              <span className={isDarkMode ? "text-white" : "text-gray-800"}>{getShapeLabel(shape)}</span>
-              <ChevronDown size={14} className={`transition-transform ${isShapeMenuOpen ? "rotate-180" : ""}`} />
+              <span>{`Shape: ${getShapeLabel(shape)}`}</span>
+              <ChevronDown size={12} className={`transition-transform ${isShapeMenuOpen ? "rotate-180" : ""}`} />
             </button>
 
             {isShapeMenuOpen && (
@@ -249,6 +239,17 @@ const Overlay: React.FC<OverlayProps> = ({ detectionResult, isDarkMode, toggleTh
                 })}
               </div>
             )}
+          </div>
+
+          {/* Persistent Pinch Hint (Reacts to state) */}
+          <div className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-all duration-300 ${
+                  isPinching
+                  ? "bg-orange-500 text-white scale-105 shadow-lg shadow-orange-500/20"
+                  : isDarkMode ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-black/5 text-gray-600 hover:bg-black/10"
+              }`}>
+               {isPinching ? <Move size={12} className="animate-spin" /> : <Move size={12} />}
+               <span>Pinch & Rotate</span>
+               {!isPinching && <span className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase opacity-60">Tip</span>}
           </div>
         </div>
 
