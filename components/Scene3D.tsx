@@ -21,6 +21,7 @@ const ReactiveMesh: React.FC<{ detectionResult: DetectionResult | null; isDarkMo
   const targetColor = useRef(new THREE.Color("#ffffff"));
   const targetRotationSpeed = useRef(0.5);
   const targetRoughness = useRef(0.2);
+  const lastPinchPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Memoize configs based on gesture
   useMemo(() => {
@@ -75,34 +76,31 @@ const ReactiveMesh: React.FC<{ detectionResult: DetectionResult | null; isDarkMo
       
       // Pinch to Drag Logic Overrides
       if (pinch && pinch.isPinching) {
-        // Map 0..1 to Viewport coordinates.
-        // X: 0 (left) -> 1 (right) from MediaPipe
-        // But we want mirror effect logic:
-        // If hand is on visual right (screen right), pinch.x will be near 0 (raw video left).
-        // (0.5 - 0) * W = +0.5W (Right) -> Correct
-        // If hand is on visual left (screen left), pinch.x will be near 1 (raw video right).
-        // (0.5 - 1) * W = -0.5W (Left) -> Correct
-        
-        const targetX = (0.5 - pinch.x) * viewport.width; 
-        const targetY = (0.5 - pinch.y) * viewport.height;
-        
-        meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, targetX, delta * 15);
-        meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, targetY, delta * 15);
-        
-        // Shrink slightly when dragging
-        meshRef.current.scale.setScalar(THREE.MathUtils.lerp(meshRef.current.scale.x, 0.8, delta * 10));
-        
-        // Rapid rotation when dragged
-        meshRef.current.rotation.x += delta * 5;
-        meshRef.current.rotation.y += delta * 5;
-        
-        // Change color to Orange when dragging
+        const pinchX = 0.5 - pinch.x;
+        const pinchY = pinch.y;
+
+        if (lastPinchPosRef.current) {
+          const dx = pinchX - lastPinchPosRef.current.x;
+          const dy = pinchY - lastPinchPosRef.current.y;
+          const rotationSensitivity = Math.PI * 3;
+
+          meshRef.current.rotation.y += dx * rotationSensitivity;
+          meshRef.current.rotation.x += -dy * rotationSensitivity;
+        }
+        lastPinchPosRef.current = { x: pinchX, y: pinchY };
+
+        meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, 0, delta * 15);
+        meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, 0, delta * 15);
+
+        meshRef.current.scale.setScalar(THREE.MathUtils.lerp(meshRef.current.scale.x, 0.9, delta * 10));
+
         if (materialRef.current) {
            materialRef.current.color.lerp(new THREE.Color("#ff8800"), delta * 10);
         }
 
       } else {
         // Default Floating / Gesture Logic
+        lastPinchPosRef.current = null;
         
         // Lerp Scale
         meshRef.current.scale.x = THREE.MathUtils.lerp(meshRef.current.scale.x, targetScale.current, delta * 3);
