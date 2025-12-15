@@ -1,15 +1,16 @@
-import React, { useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Float, Stars, Trail, MeshTransmissionMaterial, Text } from "@react-three/drei";
 import * as THREE from "three";
-import { DetectionResult, GestureType } from "../types";
+import { DetectionResult, GestureType, ShapeType } from "../types";
 
 interface Scene3DProps {
   detectionResult: DetectionResult | null;
   isDarkMode: boolean;
+  shape: ShapeType;
 }
 
-const ReactiveMesh: React.FC<{ detectionResult: DetectionResult | null; isDarkMode: boolean }> = ({ detectionResult, isDarkMode }) => {
+const ReactiveMesh: React.FC<{ detectionResult: DetectionResult | null; isDarkMode: boolean; shape: ShapeType }> = ({ detectionResult, isDarkMode, shape }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<any>(null);
   
@@ -22,6 +23,10 @@ const ReactiveMesh: React.FC<{ detectionResult: DetectionResult | null; isDarkMo
   const targetRotationSpeed = useRef(0.5);
   const targetRoughness = useRef(0.2);
   const lastPinchPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    lastPinchPosRef.current = null;
+  }, [shape]);
 
   // Memoize configs based on gesture
   useMemo(() => {
@@ -111,10 +116,6 @@ const ReactiveMesh: React.FC<{ detectionResult: DetectionResult | null; isDarkMo
         const targetY = gesture === GestureType.Pointing_Up ? 2 : gesture === GestureType.Pointing_Down ? -2 : 0;
         meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, 0, delta * 2);
         meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, targetY, delta * 2);
-
-        // Rotate
-        meshRef.current.rotation.x += delta * targetRotationSpeed.current;
-        meshRef.current.rotation.y += delta * targetRotationSpeed.current * 0.5;
         
         if (materialRef.current) {
             // Lerp Color
@@ -130,10 +131,12 @@ const ReactiveMesh: React.FC<{ detectionResult: DetectionResult | null; isDarkMo
   });
 
   return (
-    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+    <Float speed={2} rotationIntensity={0} floatIntensity={0.5}>
        <Trail width={2} color={new THREE.Color(isDarkMode ? "#00f0ff" : "#0000ff")} length={4} decay={1} local={false} stride={0} interval={1}>
         <mesh ref={meshRef}>
-          <icosahedronGeometry args={[1, 1]} /> {/* Detailed Crystal Shape */}
+          {shape === ShapeType.Icosahedron && <icosahedronGeometry args={[1, 1]} />}
+          {shape === ShapeType.Torus && <torusGeometry args={[0.7, 0.3, 24, 64]} />}
+          {shape === ShapeType.Capsule && <capsuleGeometry args={[0.35, 1.3, 8, 24]} />}
           <MeshTransmissionMaterial
             ref={materialRef}
             backside
@@ -167,12 +170,12 @@ const BackgroundEffects: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) =>
     )
 }
 
-const Scene3D: React.FC<Scene3DProps> = ({ detectionResult, isDarkMode }) => {
+const Scene3D: React.FC<Scene3DProps> = ({ detectionResult, isDarkMode, shape }) => {
   return (
     <div className="absolute inset-0 z-0 h-full w-full">
       <Canvas shadows camera={{ position: [0, 0, 6], fov: 45 }}>
         <BackgroundEffects isDarkMode={isDarkMode} />
-        <ReactiveMesh detectionResult={detectionResult} isDarkMode={isDarkMode} />
+        <ReactiveMesh detectionResult={detectionResult} isDarkMode={isDarkMode} shape={shape} />
         <mesh position={[0,0,-10]}>
              <planeGeometry args={[100,100]} />
              <meshStandardMaterial color={isDarkMode ? "#050510" : "#f0f0f5"} transparent opacity={0.8} />

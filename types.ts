@@ -9,6 +9,12 @@ export enum GestureType {
   Thumb_Down = "Thumb_Down"
 }
 
+export enum ShapeType {
+  Icosahedron = "Icosahedron",
+  Torus = "Torus",
+  Capsule = "Capsule",
+}
+
 export interface HandLandmark {
   x: number;
   y: number;

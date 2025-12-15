@@ -1,17 +1,21 @@
-import React, { useState, useEffect } from "react";
-import { DetectionResult, GestureType } from "../types";
-import { Moon, Sun, Hand, Zap, Move } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { DetectionResult, GestureType, ShapeType } from "../types";
+import { Moon, Sun, Hand, Zap, Move, ChevronDown } from "lucide-react";
 
 interface OverlayProps {
   detectionResult: DetectionResult | null;
   isDarkMode: boolean;
   toggleTheme: () => void;
+  shape: ShapeType;
+  onShapeChange: (shape: ShapeType) => void;
 }
 
-const Overlay: React.FC<OverlayProps> = ({ detectionResult, isDarkMode, toggleTheme }) => {
+const Overlay: React.FC<OverlayProps> = ({ detectionResult, isDarkMode, toggleTheme, shape, onShapeChange }) => {
   const currentGesture = detectionResult?.gesture || GestureType.None;
   const isPinching = detectionResult?.pinchState?.isPinching || false;
   const [gestureQueue, setGestureQueue] = useState<{ id: number; type: GestureType }[]>([]);
+  const [isShapeMenuOpen, setIsShapeMenuOpen] = useState(false);
+  const shapeMenuRef = useRef<HTMLDivElement>(null);
 
   // Manage Dynamic Gesture Feed
   useEffect(() => {
@@ -40,6 +44,46 @@ const Overlay: React.FC<OverlayProps> = ({ detectionResult, isDarkMode, toggleTh
 
     return () => clearTimeout(timeout);
   }, [gestureQueue]);
+
+  useEffect(() => {
+    if (!isShapeMenuOpen) return;
+
+    const onDocumentPointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (shapeMenuRef.current && !shapeMenuRef.current.contains(target)) {
+        setIsShapeMenuOpen(false);
+      }
+    };
+
+    const onDocumentKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsShapeMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onDocumentPointerDown);
+    document.addEventListener("touchstart", onDocumentPointerDown);
+    document.addEventListener("keydown", onDocumentKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocumentPointerDown);
+      document.removeEventListener("touchstart", onDocumentPointerDown);
+      document.removeEventListener("keydown", onDocumentKeyDown);
+    };
+  }, [isShapeMenuOpen]);
+
+  const getShapeLabel = (shape: ShapeType) => {
+    switch (shape) {
+      case ShapeType.Icosahedron:
+        return "Ico";
+      case ShapeType.Torus:
+        return "Donut";
+      case ShapeType.Capsule:
+        return "Capsule";
+      default:
+        return "Ico";
+    }
+  };
 
   const getGestureInstructions = (gesture: GestureType) => {
     switch (gesture) {
@@ -98,7 +142,7 @@ const Overlay: React.FC<OverlayProps> = ({ detectionResult, isDarkMode, toggleTh
                 <div className="flex items-center justify-center h-16 w-16 rounded-full bg-orange-500 shadow-lg shadow-orange-500/50">
                     <Move className="text-white" size={32} />
                 </div>
-                <span className="mt-4 text-xl font-black text-orange-500 tracking-widest uppercase shadow-black drop-shadow-md">Pinch Drag</span>
+                <span className="mt-4 text-xl font-black text-orange-500 tracking-widest uppercase shadow-black drop-shadow-md">Pinch Rotate</span>
             </div>
         )}
 
@@ -138,34 +182,95 @@ const Overlay: React.FC<OverlayProps> = ({ detectionResult, isDarkMode, toggleTh
       {/* Footer / Dynamic Legend */}
       <div className="pointer-events-auto flex flex-wrap items-end gap-2 sm:gap-4 max-w-3xl min-h-[40px]">
         
-        {/* Persistent Pinch Hint (Reacts to state) */}
-        <div className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-all duration-300 ${
-                isPinching
-                ? "bg-orange-500 text-white scale-105 shadow-lg shadow-orange-500/20"
-                : isDarkMode ? "bg-white/5 text-white/70" : "bg-black/5 text-gray-600"
-            }`}>
-             {isPinching ? <Move size={12} className="animate-spin" /> : <Move size={12} />}
-             <span>Pinch & Drag</span>
-             {!isPinching && <span className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase opacity-60">Tip</span>}
+        <div className="flex flex-wrap items-end gap-2 sm:gap-4">
+          {/* Persistent Pinch Hint (Reacts to state) */}
+          <div className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-all duration-300 ${
+                  isPinching
+                  ? "bg-orange-500 text-white scale-105 shadow-lg shadow-orange-500/20"
+                  : isDarkMode ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-black/5 text-gray-600 hover:bg-black/10"
+              }`}>
+               {isPinching ? <Move size={12} className="animate-spin" /> : <Move size={12} />}
+               <span>Pinch & Rotate</span>
+               {!isPinching && <span className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase opacity-60">Tip</span>}
+          </div>
+
+          {/* Shape selector (disclosure pill) */}
+          <div ref={shapeMenuRef} className="relative">
+            <button
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={isShapeMenuOpen}
+              onClick={() => setIsShapeMenuOpen((open) => !open)}
+              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-all duration-300 ${
+                isDarkMode ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-black/5 text-gray-600 hover:bg-black/10"
+              }`}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Shape</span>
+              <span className={isDarkMode ? "text-white" : "text-gray-800"}>{getShapeLabel(shape)}</span>
+              <ChevronDown size={14} className={`transition-transform ${isShapeMenuOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {isShapeMenuOpen && (
+              <div
+                role="menu"
+                className={`absolute bottom-full left-0 mb-2 z-50 flex items-center gap-1 rounded-lg border p-1 shadow-lg backdrop-blur-md ${
+                  isDarkMode ? "bg-black/70 border-white/10" : "bg-white/80 border-black/10"
+                }`}
+              >
+                {[
+                  { value: ShapeType.Icosahedron, label: "Ico" },
+                  { value: ShapeType.Torus, label: "Donut" },
+                  { value: ShapeType.Capsule, label: "Capsule" },
+                ].map((option) => {
+                  const isSelected = shape === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={isSelected}
+                      onClick={() => {
+                        onShapeChange(option.value);
+                        setIsShapeMenuOpen(false);
+                      }}
+                      className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        isSelected
+                          ? isDarkMode
+                            ? "bg-cyber-primary text-black"
+                            : "bg-blue-600 text-white"
+                          : isDarkMode
+                            ? "bg-white/5 text-white/70 hover:bg-white/10"
+                            : "bg-black/5 text-gray-700 hover:bg-black/10"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Dynamic Stream of Recognized Gestures */}
-        {gestureQueue.map((item) => (
-            <div 
-                key={item.id} 
-                className={`flex animate-in fade-in slide-in-from-bottom-4 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold backdrop-blur-sm shadow-lg ${
-                    isDarkMode ? "bg-white/10 text-white" : "bg-white/80 text-gray-800"
-                } border-l-4 ${
-                    item.type === GestureType.Closed_Fist ? 'border-red-500' :
-                    item.type === GestureType.Open_Palm ? 'border-cyan-500' :
-                    item.type === GestureType.Pointing_Up ? 'border-purple-500' :
-                    item.type === GestureType.Victory ? 'border-yellow-400' : 'border-gray-500'
-                }`}
-            >
-                <Hand size={12} />
-                {item.type.replace(/_/g, " ")}
-            </div>
-        ))}
+        <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto sm:ml-auto sm:justify-end">
+          {gestureQueue.map((item) => (
+              <div 
+                  key={item.id} 
+                  className={`flex animate-in fade-in slide-in-from-bottom-4 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold backdrop-blur-sm shadow-lg ${
+                      isDarkMode ? "bg-white/10 text-white" : "bg-white/80 text-gray-800"
+                  } border-l-4 ${
+                      item.type === GestureType.Closed_Fist ? 'border-red-500' :
+                      item.type === GestureType.Open_Palm ? 'border-cyan-500' :
+                      item.type === GestureType.Pointing_Up ? 'border-purple-500' :
+                      item.type === GestureType.Victory ? 'border-yellow-400' : 'border-gray-500'
+                  }`}
+              >
+                  <Hand size={12} />
+                  {item.type.replace(/_/g, " ")}
+              </div>
+          ))}
+        </div>
       </div>
     </div>
   );
